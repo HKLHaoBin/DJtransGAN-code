@@ -1,6 +1,6 @@
 from djtransgan.config              import settings
 from djtransgan.dataset.utils       import *
-from djtransgan.dataset.noise       import *
+from djtransgan.dataset.noise       import *  # acoustics optional (see noise.py)
 from djtransgan.dataset.dataset     import *
 from djtransgan.dataset.dataloader  import *
 from djtransgan.dataset.datasampler import *

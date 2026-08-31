@@ -3,87 +3,65 @@ warnings.filterwarnings('ignore')
 
 import os
 import sys
-if os.getcwd() in sys.path:
-    sys.path.append('../')
-else:    
-    sys.path.append(os.getcwd())
-    
-import torch
 import argparse
+from pathlib import Path
 
-from djtransgan.config  import settings
-from djtransgan.utils   import download_pretrained
-from djtransgan.utils   import check_exist, time_to_str, squeeze_dim, get_filename
-from djtransgan.utils   import load_pt, load_audio, out_audio
-from djtransgan.model   import get_generator
-from djtransgan.dataset import get_dataset, batchlize
-from djtransgan.process import preprocess, postprocess
+# Allow `python script/inference.py` from code/, and also from workspace root.
+_CODE = Path(__file__).resolve().parent.parent
+_ROOT = _CODE.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+if str(_CODE) not in sys.path:
+    sys.path.insert(0, str(_CODE))
 
-
-
-torch.manual_seed(settings.RANDOM_SEED)
-
-
+from server.engine import run_mix
+from server.paths import ensure_runtime_env
 
 
 def main():
-    
-    parser  = argparse.ArgumentParser(description='GAN Trainer')
-    
-    parser.add_argument('--out_dir'   , type=str, default=os.path.join(settings.STORE_DIR, 'inference'))
-    parser.add_argument('--g_path'    , type=str, default='./pretrained/djtransgan_minmax.pt')
+    ensure_runtime_env()
+    os.chdir(_CODE)
+
+    from djtransgan.config import settings
+
+    parser = argparse.ArgumentParser(description='DJtransGAN inference')
+    parser.add_argument('--out_dir', type=str, default=os.path.join(settings.STORE_DIR, 'inference'))
+    parser.add_argument('--g_path', type=str, default='./pretrained/djtransgan_minmax.pt')
     parser.add_argument('--prev_track', type=str, default='./test/Breikthru ft Danny Devinci-Touch.mp3')
     parser.add_argument('--next_track', type=str, default='./test/Jameson-Hangin.mp3')
-    parser.add_argument('--prev_cue'  , default = 96)
-    parser.add_argument('--next_cue'  , default = 30)
-    parser.add_argument('--download'  , default = 1)
-    
-     
-    args       = parser.parse_args()
-    
-    if args.download:
-        print('Download pre trained start ...')
-        download_pretrained()
-        print('Download pre trained complete ...')
-        
-    # Load generator
-    print('Loading generator start ...')
-    generator = get_generator()
-    
-    if os.path.exists(args.g_path):
-        generator.load_state_dict(load_pt(args.g_path))
-    else:
-        print(f'{args.g_path} not exist')
-    generator.eval()
-    print('Loading generator complete ...')
-    
-    # Load audio
-    print('Loading audio start ...')
-    prev_audio = load_audio(args.prev_track)
-    next_audio = load_audio(args.next_track)
-    prev_cue   = args.prev_cue
-    next_cue   = args.next_cue
-    print('Loading audio complete ...')
-    
-    # Mix
-    print('Mixing audio start ...')
-    (pair_audio, timestamps), (pair_audio_for_g, cue_for_g) = preprocess(prev_audio, next_audio, prev_cue, next_cue)
-    mix_audio, mix_out       = generator.infer(*pair_audio_for_g, cue_region=cue_for_g)
-    post_mix_audio, post_cue = postprocess(mix_audio, pair_audio, timestamps, cue_for_g)
-    saved_id                 = f'{get_filename(args.prev_track)}_{get_filename(args.next_track)}'
-    print('Mixing audio complete ...')
-    
-    # save out 
-    print('Saving audio start ...')
-    out_path = os.path.join(args.out_dir, f'{saved_id}_short.wav')
-    check_exist(out_path)
-    out_audio(squeeze_dim(mix_audio).to(torch.float32), out_path)
-    out_path = os.path.join(args.out_dir, f'{saved_id}_full.wav')
-    check_exist(out_path)
-    out_audio(squeeze_dim(post_mix_audio).to(torch.float32), out_path)
-    print('Saving audio complete ...')
+    parser.add_argument('--prev_cue', type=float, default=96.0)
+    parser.add_argument('--next_cue', type=float, default=30.0)
+    parser.add_argument('--download', type=int, default=1)
+    parser.add_argument('--match_bpm', type=int, default=1, help='1=stretch Next to Prev BPM')
+    parser.add_argument('--align_cue', type=int, default=1, help='1=align cue-window lengths')
+
+    args = parser.parse_args()
+
+    def on_progress(step, total, message):
+        print(message)
+
+    from djtransgan.utils import get_filename
+
+    saved_id = f'{get_filename(args.prev_track)}_{get_filename(args.next_track)}'
+    result = run_mix(
+        args.prev_track,
+        args.next_track,
+        args.prev_cue,
+        args.next_cue,
+        args.out_dir,
+        weights_path=Path(args.g_path) if args.g_path else None,
+        download=bool(args.download),
+        on_progress=on_progress,
+        short_name=f'{saved_id}_short.wav',
+        full_name=f'{saved_id}_full.wav',
+        params_name=f'{saved_id}_params.json',
+        match_bpm=bool(args.match_bpm),
+        align_cue=bool(args.align_cue),
+    )
+    print('Wrote:', result['short_path'])
+    print('Wrote:', result['full_path'])
+    print('Wrote:', result['params_path'])
 
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

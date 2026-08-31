@@ -1,7 +1,9 @@
 # Data & Package Directory
-PAIR_DIR    = './DJtransGAN-dg-pipeline/data/track/pair'
-MIX_DIR     = './DJtransGAN-dg-pipeline/data/mix'
-STORE_DIR   = './results'
+# Paths are relative to `code/` (cwd when running scripts). Sibling repos live under
+# F:\编程\DJtransGAN\{dg-pipeline,results}.
+PAIR_DIR    = '../dg-pipeline/data/track/pair'
+MIX_DIR     = '../dg-pipeline/data/mix'
+STORE_DIR   = '../results'
 
 
 # STFT Parameters

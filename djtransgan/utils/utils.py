@@ -39,15 +39,78 @@ def str_to_time(string):
 
 # I/O
 
+_SOUNDFILE_UNRELIABLE = {".mp3", ".m4a", ".aac", ".ogg", ".wma", ".m4b"}
+
+
+def _ffmpeg_decode_to_wav(audio_path, sr=settings.SR):
+    """Decode compressed audio via ffmpeg into an ASCII-safe temp WAV."""
+    import shutil
+    import subprocess
+    import tempfile
+    from pathlib import Path as _Path
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError(
+            f"cannot decode {os.path.splitext(str(audio_path))[1]}: "
+            "soundfile failed and ffmpeg is not on PATH"
+        )
+
+    src = _Path(audio_path)
+    ascii_tmp = _Path(r"F:\djtransgan-tmp")
+    out_dir = ascii_tmp if ascii_tmp.is_dir() else _Path(tempfile.gettempdir())
+    out_dir.mkdir(parents=True, exist_ok=True)
+    token = f"{os.getpid()}_{abs(hash(str(src))) % 10**8}"
+    tmp_in = out_dir / f"djtg_in_{token}{src.suffix.lower() or '.bin'}"
+    tmp_wav = out_dir / f"djtg_out_{token}.wav"
+    shutil.copy2(src, tmp_in)
+    cmd = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+        "-i", str(tmp_in),
+        "-vn", "-acodec", "pcm_s16le", "-ar", str(int(sr)), "-ac", "2",
+        str(tmp_wav),
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if proc.returncode != 0 or not tmp_wav.is_file():
+            err = (proc.stderr or proc.stdout or "").strip()[:400]
+            raise RuntimeError(f"ffmpeg failed decoding {src.name}: {err or proc.returncode}")
+        return str(tmp_wav)
+    finally:
+        try:
+            tmp_in.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 def load_audio(audio_path, 
                sr=settings.SR, 
                mono=True, 
                start=0, 
                end=None
               ):
-    if 'mp3' in audio_path:
-        torchaudio.set_audio_backend('sox_io')
-    audio, org_sr = torchaudio.load(audio_path, frame_offset=start, num_frames=-1 if end is None else end-start)
+    tmp_wav = None
+    try:
+        try:
+            audio, org_sr = torchaudio.load(
+                audio_path,
+                frame_offset=start,
+                num_frames=-1 if end is None else end - start,
+            )
+        except Exception:
+            tmp_wav = _ffmpeg_decode_to_wav(audio_path, sr=sr)
+            audio, org_sr = torchaudio.load(
+                tmp_wav,
+                frame_offset=start,
+                num_frames=-1 if end is None else end - start,
+            )
+    finally:
+        if tmp_wav:
+            try:
+                os.unlink(tmp_wav)
+            except Exception:
+                pass
+
     audio = to_mono(audio) if mono else audio
     
     if org_sr != sr:

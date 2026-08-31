@@ -19,12 +19,16 @@ def get_stft_func(**kargs): # stype: asteroid, nnaudio, torchlibrosa
         kargs.pop('stft_type')
     else:
         stft_type = 'torchlibrosa'
-    
-    return {
-        'nnaudio' : NNaudioSTFT(**kargs),
-        'asteroid': AsteroidSTFT(**kargs), 
-        'torchlibrosa': TorchlibrosaSTFT(**kargs), 
-    }[stft_type]
+
+    # Construct only the requested backend (eager dict eval used to require all three).
+    factories = {
+        'nnaudio': NNaudioSTFT,
+        'asteroid': AsteroidSTFT,
+        'torchlibrosa': TorchlibrosaSTFT,
+    }
+    if stft_type not in factories:
+        raise ValueError(f'unknown stft_type: {stft_type}')
+    return factories[stft_type](**kargs)
 
 
 def get_mel_func():
