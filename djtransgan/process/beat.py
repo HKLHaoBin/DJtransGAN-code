@@ -72,14 +72,26 @@ def estimate_beat(audio):
 
 
 def estimate_bpm(beat_curve):
+    """Robust whole-track fallback retained for compatibility.
+
+    Active matching uses cue-local tempo; this fallback no longer samples only
+    the middle third of a track.
+    """
     try:
-        total_beat = len(beat_curve)
-        st = int(total_beat / 3)
-        ed = int(total_beat * 2 / 3)
-        beat_num = ed - st
-        total_time = beat_curve[ed] - beat_curve[st]
-        bpm = float(beat_num * 60 / total_time)
-        return bpm
+        intervals = np.diff(np.asarray(beat_curve, dtype=np.float64).reshape(-1))
+        intervals = intervals[
+            np.isfinite(intervals)
+            & (intervals >= 60.0 / 240.0)
+            & (intervals <= 60.0 / 40.0)
+        ]
+        if intervals.size < 3:
+            return -1
+        median_interval = float(np.median(intervals))
+        relative_deviation = np.abs(intervals - median_interval) / median_interval
+        intervals = intervals[relative_deviation <= 0.35]
+        if intervals.size < 3:
+            return -1
+        return float(60.0 / np.median(intervals))
     except Exception:
         return -1
-
+

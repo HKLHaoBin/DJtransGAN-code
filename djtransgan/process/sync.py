@@ -7,7 +7,10 @@ from djtransgan.process import split_audio
 
 
 def sync_cue(prev_audio, next_audio, prev_cue, next_cue):
-    """Paper behavior: stretch Next cue middle to match Prev window length."""
+    """Legacy API: constant-stretch a Next cue window to Prev duration.
+
+    The active preprocess path uses one unified transition timemap instead.
+    """
     prev_sample = prev_audio[..., time_to_samples(prev_cue[0]):time_to_samples(prev_cue[1])].size(-1)
     next_sample = next_audio[..., time_to_samples(next_cue[0]):time_to_samples(next_cue[1])].size(-1)
 
@@ -19,8 +22,8 @@ def sync_cue(prev_audio, next_audio, prev_cue, next_cue):
             "Choose a later Next cue (need room before the cue)."
         )
 
-    # time inverse inversely proportional with bpm
-    ratio = get_stretch_ratio(next_sample, prev_sample)
+    # Rubber Band rate is source duration / target duration.
+    ratio = next_sample / prev_sample
     splited = split_audio(next_audio, next_cue)
     splited[1] = time_stretch(splited[1], ratio)
     begin_idx = 1 if splited[0] is None else 0
@@ -38,4 +41,4 @@ def sync_bpm(next_audio, prev_bpm, next_bpm):
     ratio = get_stretch_ratio(next_bpm, prev_bpm)
     next_audio = time_stretch(next_audio, ratio)
     return next_audio, ratio
-
+
