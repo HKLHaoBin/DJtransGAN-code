@@ -4,6 +4,25 @@
 > *2022 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP 2022)*
 > Bo-Yu Chen, Wei-Han Hsu, Wei-Hsiang Liao, Marco A. Martínez-Ramírez, Yuki Mitsufuji, Yi-Hsuan Yang
 
+## Related repositories (this fork)
+
+This repo is a public MIT fork maintained at **[HKLHaoBin/DJtransGAN-code](https://github.com/HKLHaoBin/DJtransGAN-code)** (upstream: [ChenPaulYu/DJtransGAN](https://github.com/ChenPaulYu/DJtransGAN)). Local patches focus on inference / Mix Studio compatibility.
+
+| Repository | Role |
+| --- | --- |
+| [HKLHaoBin/DJtransGAN](https://github.com/HKLHaoBin/DJtransGAN) | Mix Studio shell (`server/` + `web/`) — clone as workspace root, put **this** repo in `code/` |
+| **HKLHaoBin/DJtransGAN-code** (this repo) | Model, training, and inference |
+| [HKLHaoBin/DJtransGAN-demo-site](https://github.com/HKLHaoBin/DJtransGAN-demo-site) | ICASSP 2022 listening demo page |
+| [HKLHaoBin/DJtransGAN-dg-pipeline](https://github.com/HKLHaoBin/DJtransGAN-dg-pipeline) | Training data generation pipeline |
+
+```bash
+git clone https://github.com/HKLHaoBin/DJtransGAN.git
+cd DJtransGAN
+git clone https://github.com/HKLHaoBin/DJtransGAN-code.git code
+```
+
+For a browser UI, start the Mix Studio from the shell repo (`start-api.ps1` / `start-web.ps1`). CLI inference below still works from this tree.
+
 ## Overview
 
 
@@ -13,10 +32,10 @@ The reop is nearly complete; we have already open source all the code you need f
 2. DJtransGAN architecture and its training code 
 3. DJtransGAN pre-trained model and its inference code
 
-The remaining 1/4 of DJtransGANs' is implemented in another repo [DJtransGAN-dg-pipeline](https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline) to make the codebase clean. Moreover, These two repos are totally independent and can be executed individually, and we will detail the process below.
+The remaining 1/4 of DJtransGANs' is implemented in another repo [DJtransGAN-dg-pipeline](https://github.com/HKLHaoBin/DJtransGAN-dg-pipeline) (upstream: [ChenPaulYu/DJtransGAN-dg-pipeline](https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline)) to make the codebase clean. Moreover, These two repos are totally independent and can be executed individually, and we will detail the process below.
 
 
-Furthermore, if you want to hear more audio example, please check our demo page [here](https://paulyuchen.com/djtransgan-icassp2022/).
+Furthermore, if you want to hear more audio example, please check our demo page [here](https://paulyuchen.com/djtransgan-icassp2022/) or the mirrored demo site [HKLHaoBin/DJtransGAN-demo-site](https://github.com/HKLHaoBin/DJtransGAN-demo-site).
 
 
 ## Dataset
@@ -38,19 +57,19 @@ pip install -r requirements.txt
 ```
 
 ### Generate dataset
-You should first clone the [DJtransGAN-dg-pipeline](https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline) and refer to its README.md to generate dataset include mixable  pairs and mixes made by professional DJ. 
+You should first clone the [DJtransGAN-dg-pipeline](https://github.com/HKLHaoBin/DJtransGAN-dg-pipeline) (or upstream [ChenPaulYu/DJtransGAN-dg-pipeline](https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline)) and refer to its README.md to generate dataset include mixable  pairs and mixes made by professional DJ. 
 
 ```
 
-git clone https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline
+git clone https://github.com/HKLHaoBin/DJtransGAN-dg-pipeline
 
 ```
 
 ### Configuration
 Next, you should set the configuration in `djtransgan/config/settings.py`  for global usage of the repo, Most important of all, you should set the path of `PAIR_DIR`, `MIX_DIR` and  `STORE_DIR`.
 
-1. `PAIR_DIR` : the directory contain a collection of mixable pair and its cue points which is generate by [DJtransGAN-dg-pipeline](https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline).
-2. `MIX_DIR` : the directory contain a collection of mix segment and its cue points which is generate by [DJtransGAN-dg-pipeline](https://github.com/ChenPaulYu/DJtransGAN-dg-pipeline).
+1. `PAIR_DIR` : the directory contain a collection of mixable pair and its cue points which is generate by [DJtransGAN-dg-pipeline](https://github.com/HKLHaoBin/DJtransGAN-dg-pipeline).
+2. `MIX_DIR` : the directory contain a collection of mix segment and its cue points which is generate by [DJtransGAN-dg-pipeline](https://github.com/HKLHaoBin/DJtransGAN-dg-pipeline).
 3. `STORE_DIR` : the directory conatian the training and inferring result of DJtransGAN.
 
 
